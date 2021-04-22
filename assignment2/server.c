@@ -27,7 +27,7 @@ int main(int argc, char const *argv[])
 
 	    pid_t fpid=-1;
 	    
-	    printf("execve=0x%p\n", execve);
+	    printf("Start execve=0x%p\n", execve);
 
 	    // Creating socket file descriptor
 	    if ((server_fd = socket(AF_INET, SOCK_STREAM, 0)) == 0)
@@ -79,6 +79,7 @@ int main(int argc, char const *argv[])
 	    	char str[20];
 		sprintf(str, "%d", new_socket);
 		argv_list[1] = str;
+		printf("Child Process execve=0x%p\n", execve);
 	    	execv("server",argv_list);
 	    	return 0;
 	    
@@ -97,8 +98,11 @@ int main(int argc, char const *argv[])
 	}
 	else
 	{
+	        
 		int i=0, client_socket=0, status = 0;
 		printf("Inside the execed process\n");
+		printf("After exec execve=0x%p\n", execve);
+		
 		client_socket = atoi(argv[1]);
 		
 	    	status = reducePrivs();
