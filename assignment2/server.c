@@ -17,80 +17,98 @@ int wait4Children();
 #define PORT 80
 int main(int argc, char const *argv[])
 {
-    int server_fd, new_socket;
-    struct sockaddr_in address;
-    int opt = 1;
-    int addrlen = sizeof(address);
 
-    pid_t fpid=-1;
-    
-    printf("execve=0x%p\n", execve);
+	if(argc == 1)
+    	{
+	    int server_fd, new_socket;
+	    struct sockaddr_in address;
+	    int opt = 1;
+	    int addrlen = sizeof(address);
 
-    // Creating socket file descriptor
-    if ((server_fd = socket(AF_INET, SOCK_STREAM, 0)) == 0)
-    {
-        perror("socket failed");
-        exit(EXIT_FAILURE);
-    }
+	    pid_t fpid=-1;
+	    
+	    printf("execve=0x%p\n", execve);
 
-    /* Attaching socket to port 80 */
-    if (setsockopt(server_fd, 
-    		    SOL_SOCKET, 
-    		    SO_REUSEADDR | SO_REUSEPORT,
-                    &opt, 
-                    sizeof(opt)))
-    {
-        perror("setsockopt");
-        exit(EXIT_FAILURE);
-    }
-    
-    address.sin_family = AF_INET;
-    address.sin_addr.s_addr = INADDR_ANY;
-    address.sin_port = htons( PORT );
-    /* Forcefully attaching socket to the port 80 */
-    if (bind(server_fd, (struct sockaddr *)&address, sizeof(address))<0)
-    {
-        perror("bind failed");
-        exit(EXIT_FAILURE);
-    }
-    
-    if (listen(server_fd, 3) < 0)
-    {
-        perror("listen");
-        exit(EXIT_FAILURE);
-    }
-    
-    if ((new_socket = accept(server_fd, 
-    		 	      (struct sockaddr *)&address,
-                             (socklen_t*)&addrlen)) < 0)
-    {
-        perror("accept");
-        exit(EXIT_FAILURE);
-    }
-    
-    fpid = fork();    
+	    // Creating socket file descriptor
+	    if ((server_fd = socket(AF_INET, SOCK_STREAM, 0)) == 0)
+	    {
+		perror("socket failed");
+		exit(EXIT_FAILURE);
+	    }
 
-    if (fpid == 0) /* Child process */
-    {
-    	int status = 0;
-    	status = reducePrivs();
-    	if(status ==0)
-    	  status = doWork(new_socket); 
-    	else
-    	  printf("Privelege Separation Failure");
-    
-    }
-    else if (fpid > 0) /* Parent process */
-    {
-        int status = 0;
-        status = wait4Children();  
-    }
-    else /* FORK failed */
-    {
-    	; /* Cannot do anything here */
-    } 
+	    /* Attaching socket to port 80 */
+	    if (setsockopt(server_fd, 
+	    		    SOL_SOCKET, 
+	    		    SO_REUSEADDR | SO_REUSEPORT,
+		            &opt, 
+		            sizeof(opt)))
+	    {
+		perror("setsockopt");
+		exit(EXIT_FAILURE);
+	    }
+	    
+	    address.sin_family = AF_INET;
+	    address.sin_addr.s_addr = INADDR_ANY;
+	    address.sin_port = htons( PORT );
+	    /* Forcefully attaching socket to the port 80 */
+	    if (bind(server_fd, (struct sockaddr *)&address, sizeof(address))<0)
+	    {
+		perror("bind failed");
+		exit(EXIT_FAILURE);
+	    }
+	    
+	    if (listen(server_fd, 3) < 0)
+	    {
+		perror("listen");
+		exit(EXIT_FAILURE);
+	    }
+	    
+	    if ((new_socket = accept(server_fd, 
+	    		 	      (struct sockaddr *)&address,
+		                     (socklen_t*)&addrlen)) < 0)
+	    {
+		perror("accept");
+		exit(EXIT_FAILURE);
+	    }
+	    
+	    fpid = fork();    
 
-    return 0;
+	    if (fpid == 0) /* Child process */
+	    {
+	    	char * argv_list[] = {"server",NULL,NULL};
+	    	char str[20];
+		sprintf(str, "%d", new_socket);
+		argv_list[1] = str;
+	    	execv("server",argv_list);
+	    	return 0;
+	    
+	    }
+	    else if (fpid > 0) /* Parent process */
+	    {
+		int status = 0;
+		status = wait4Children();  
+	    }
+	    else /* FORK failed */
+	    {
+	    	; /* Cannot do anything here */
+	    } 
+
+	    return 0;
+	}
+	else
+	{
+		int i=0, client_socket=0, status = 0;
+		printf("Inside the execed process\n");
+		client_socket = atoi(argv[1]);
+		
+	    	status = reducePrivs();
+	    	if(status ==0)
+	    	  status = doWork(client_socket); 
+	    	else
+	    	  printf("Privilege Separation Failure");
+	    
+	}
+	return 0;
 }
 
 int doWork(int socket_fd)
@@ -112,7 +130,7 @@ int reducePrivs()
     int stat = setuid(65534); 
     if(stat == 0)  
     { 
-      printf("Priveleges Dropped\n");
+      printf("Privileges Dropped\n");
       return 0;
     } 
     else 
